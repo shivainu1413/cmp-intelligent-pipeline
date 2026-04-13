@@ -1,0 +1,15 @@
+{
+  "title": "CMP Smart Pipeline",
+  "subtitle": "Real-time CMP sensor ETL with RAG-powered anomaly diagnostics.",
+  "cover": "https://raw.githubusercontent.com/shivainu1413/cmp-smart-pipeline/main/docs/cover.png",
+  "techStack": ["python", "apache-airflow", "polars", "postgresql", "mongodb", "docker", "gemini-api", "github-actions", "pytest"],
+  "category": "Data Engineering",
+  "status": "active",
+  "featured": true,
+  "order": 2,
+  "highlights": [
+    "Airflow-orchestrated ETL with recursive schema validation and dual-database persistence",
+    "RAG agent retrieves historical repairs via vector search and generates LLM-powered diagnostics",
+    "CI/CD pipeline with lint, 28 unit tests, and automated Docker image builds"
+  ]
+}
