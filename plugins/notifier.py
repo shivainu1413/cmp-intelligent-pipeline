@@ -73,7 +73,7 @@ def send_anomaly_alert(
         if r.status_code == 200:
             print(f"OK: Anomaly Slack alert sent for {filename}")
         else:
-            print(f"WARN: Rich payload failed, trying fallback...")
+            print("WARN: Rich payload failed, trying fallback...")
             r2 = requests.post(webhook_url, json=fallback_payload, timeout=10)
             if r2.status_code == 200:
                 print(f"OK: Anomaly Slack alert sent (Fallback) for {filename}")

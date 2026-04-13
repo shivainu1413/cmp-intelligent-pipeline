@@ -55,13 +55,13 @@ class TestFlattenMetrics:
         """Record with null error_code should have is_anomaly = False."""
         df = _make_test_df([None])
         flat = flatten_metrics(df)
-        assert flat["is_anomaly"][0] == False
+        assert not flat["is_anomaly"][0]
 
     def test_error_record_is_anomaly(self):
         """Record with error_code should have is_anomaly = True."""
         df = _make_test_df(["ALM-3050"])
         flat = flatten_metrics(df)
-        assert flat["is_anomaly"][0] == True
+        assert flat["is_anomaly"][0]
 
     def test_row_count_preserved(self):
         """Flattening should not change the number of rows."""

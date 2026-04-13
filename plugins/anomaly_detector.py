@@ -24,4 +24,4 @@ def detect_anomalies(flat_df: pl.DataFrame) -> pl.DataFrame:
     Current rule: error_code is not null → anomaly.
     Can be extended with threshold-based rules in the future.
     """
-    return flat_df.filter(pl.col("is_anomaly") == True)
+    return flat_df.filter(pl.col("is_anomaly"))

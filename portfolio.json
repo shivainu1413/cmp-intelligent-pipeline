@@ -1,7 +1,7 @@
 {
-  "title": "CMP Smart Pipeline",
+  "title": "CMP Intelligent Pipeline",
   "subtitle": "Real-time CMP sensor ETL with RAG-powered anomaly diagnostics.",
-  "cover": "https://raw.githubusercontent.com/shivainu1413/cmp-smart-pipeline/main/docs/cover.png",
+  "cover": "https://raw.githubusercontent.com/shivainu1413/cmp-intelligent-pipeline/main/docs/cover.png",
   "techStack": ["python", "apache-airflow", "polars", "postgresql", "mongodb", "docker", "gemini-api", "github-actions", "pytest"],
   "category": "Data Engineering",
   "status": "active",

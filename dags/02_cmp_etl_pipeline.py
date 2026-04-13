@@ -76,7 +76,7 @@ def process_cmp_logs(**context):
                     pass
                 continue
 
-            print(f"OK: Schema passed")
+            print("OK: Schema passed")
 
             # Step 3: Flatten + Anomaly detection
             flat_df = flatten_metrics(df)
