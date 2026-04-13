@@ -1,0 +1,5 @@
+FROM apache/superset:latest
+
+USER root
+RUN pip install psycopg2-binary pg8000
+USER superset

@@ -1,0 +1,20 @@
+# Ruff configuration
+# Docs: https://docs.astral.sh/ruff/
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports, variables, etc.)
+    "W",   # pycodestyle warnings
+]
+ignore = [
+    "E501",  # line too long
+    "E402",  # module import not at top (needed for Airflow DAG sys.path)
+    "F401",  # unused import (plugins/__init__.py)
+]
+
+exclude = [
+    "venv/",
+    ".venv/",
+    "__pycache__/",
+]

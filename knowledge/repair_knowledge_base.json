@@ -1,0 +1,22 @@
+{
+  "ALM-3050": {
+    "issue": "Slurry Supply Flow Low (研磨液供應流量過低)",
+    "description": "Detected slurry flow rate is below threshold (< 180 ml/min). This increases friction and may cause scratches.",
+    "sop_steps": [
+      "1. Check the slurry peristaltic pump (蠕動幫浦) RPM.",
+      "2. Inspect the slurry delivery tube for kinks or clogs.",
+      "3. Verify if the slurry tank level is sufficient.",
+      "4. If filter pressure is high (>20psi), replace the POU filter immediately."
+    ],
+    "expert_note": "If Motor Current is also high (>20A), it confirms high friction. Stop the platen immediately to prevent wafer breakage."
+  },
+  "ERR-9999": {
+    "issue": "Sensor Communication Failure",
+    "description": "Lost heartbeat from main sensor module.",
+    "sop_steps": [
+      "1. Check the RS-232 cable connection.",
+      "2. Reboot the sensor controller module."
+    ],
+    "expert_note": "Check if there was a power dip recently."
+  }
+}
