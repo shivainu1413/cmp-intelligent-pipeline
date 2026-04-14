@@ -1,0 +1,178 @@
+# ============================================================
+# Airflow Helm Chart - Custom Values
+# Chart: apache-airflow/airflow (Official)
+# Docs: https://airflow.apache.org/docs/helm-chart/stable/index.html
+# ============================================================
+
+# ------------------------------------------------------------
+# 1. Executor: KubernetesExecutor
+#    Each task runs in its own Pod, scales to zero when idle.
+#    This is the key difference from LocalExecutor in Docker Compose.
+# ------------------------------------------------------------
+executor: KubernetesExecutor
+
+# ------------------------------------------------------------
+# 2. Airflow Docker Image
+#    Points to the image built by our CI pipeline in GHCR.
+#    Update the repository to match your GitHub username/repo.
+# ------------------------------------------------------------
+images:
+  airflow:
+    repository: ghcr.io/shivainu1413/cmp-intelligent-pipeline/airflow
+    tag: latest
+    pullPolicy: Always
+
+# ------------------------------------------------------------
+# 3. Airflow Configuration Overrides
+# ------------------------------------------------------------
+config:
+  core:
+    dags_folder: /opt/airflow/dags
+    load_examples: "False"
+  logging:
+    remote_logging: "False"
+
+# ------------------------------------------------------------
+# 4. Environment Variables from K8s Secret
+#    Injects MONGO_URI, GEMINI_API_KEY, Slack webhooks, etc.
+#    into every Airflow component (webserver, scheduler, workers).
+# ------------------------------------------------------------
+extraEnvFrom: |
+  - secretRef:
+      name: etl-pipeline-secrets
+
+# ------------------------------------------------------------
+# 5. DAG Sync via Git-Sync Sidecar
+#    Automatically pulls latest DAGs from GitHub every 60s.
+#    No need to manually copy DAG files into the container.
+# ------------------------------------------------------------
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/shivainu1413/cmp-intelligent-pipeline.git
+    branch: main
+    subPath: dags
+    wait: 60
+
+# ------------------------------------------------------------
+# 6. Extra Volume Mounts
+#    Mount the knowledge directory for RAG agent.
+#    In production, this would be a PVC or cloud storage.
+# ------------------------------------------------------------
+extraVolumes:
+  - name: knowledge-base
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: knowledge-base
+    mountPath: /opt/airflow/knowledge
+
+# ------------------------------------------------------------
+# 7. Webserver Configuration
+# ------------------------------------------------------------
+webserver:
+  replicas: 1
+  service:
+    type: NodePort
+    ports:
+      - port: 8080
+        nodePort: 30080
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  defaultUser:
+    enabled: true
+    username: admin
+    password: admin
+    firstname: Admin
+    lastname: User
+    email: admin@example.com
+    role: Admin
+
+# ------------------------------------------------------------
+# 8. Scheduler Configuration
+# ------------------------------------------------------------
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 2Gi
+      cpu: "1"
+
+# ------------------------------------------------------------
+# 9. KubernetesExecutor Pod Template
+#    Defines resource limits for each task Pod.
+#    Tasks with anomalies (RAG + LLM call) may need more memory.
+# ------------------------------------------------------------
+workers:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 200m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+
+# ------------------------------------------------------------
+# 10. PostgreSQL (Airflow Metadata DB)
+#     Disabled here because we deploy our own StatefulSet
+#     in the 'data' namespace for more control.
+# ------------------------------------------------------------
+postgresql:
+  enabled: false
+
+data:
+  metadataConnection:
+    user: airflow
+    pass: airflow
+    host: postgres-svc.data.svc.cluster.local
+    port: 5432
+    db: airflow
+
+# ------------------------------------------------------------
+# 11. Redis
+#     Not needed for KubernetesExecutor (only for Celery).
+# ------------------------------------------------------------
+redis:
+  enabled: false
+
+# ------------------------------------------------------------
+# 12. Flower (Celery monitoring)
+#     Not needed for KubernetesExecutor.
+# ------------------------------------------------------------
+flower:
+  enabled: false
+
+# ------------------------------------------------------------
+# 13. Triggerer (for deferrable operators)
+# ------------------------------------------------------------
+triggerer:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+
+# ------------------------------------------------------------
+# 14. StatsD (metrics export for Prometheus)
+# ------------------------------------------------------------
+statsd:
+  enabled: true
+
+# ------------------------------------------------------------
+# 15. Pod Annotations for Prometheus Scraping
+# ------------------------------------------------------------
+airflowPodAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9102"

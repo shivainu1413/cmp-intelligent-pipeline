@@ -1,0 +1,22 @@
+# ============================================================
+# Superset Service
+# NodePort so you can access the dashboard from your browser
+# on minikube via: minikube service superset-svc -n data
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: superset-svc
+  namespace: data
+  labels:
+    app: superset
+    app.kubernetes.io/part-of: cmp-pipeline
+spec:
+  type: NodePort
+  ports:
+    - port: 8088
+      targetPort: 8088
+      nodePort: 30088
+      protocol: TCP
+  selector:
+    app: superset

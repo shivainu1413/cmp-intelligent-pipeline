@@ -1,0 +1,75 @@
+# ============================================================
+# Superset Deployment
+# Why Deployment instead of StatefulSet?
+#   - Superset is stateless (no local data to persist)
+#   - All state lives in PostgreSQL
+#   - Can be replaced/scaled freely
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset
+  namespace: data
+  labels:
+    app: superset
+    app.kubernetes.io/part-of: cmp-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: superset
+  template:
+    metadata:
+      labels:
+        app: superset
+    spec:
+      initContainers:
+        # Initialize Superset database and create admin user on first boot
+        - name: superset-init
+          image: ghcr.io/shivainu1413/cmp-intelligent-pipeline/superset:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              superset db upgrade &&
+              superset fab create-admin \
+                --username admin \
+                --firstname Admin \
+                --lastname User \
+                --email admin@example.com \
+                --password admin || true &&
+              superset init
+          env:
+            - name: SUPERSET_SECRET_KEY
+              value: "k8s-superset-secret-change-me"
+            - name: SQLALCHEMY_DATABASE_URI
+              value: "postgresql+psycopg2://airflow:airflow@postgres-svc.data.svc.cluster.local/airflow"
+      containers:
+        - name: superset
+          image: ghcr.io/shivainu1413/cmp-intelligent-pipeline/superset:latest
+          ports:
+            - containerPort: 8088
+          env:
+            - name: SUPERSET_SECRET_KEY
+              value: "k8s-superset-secret-change-me"
+            - name: SQLALCHEMY_DATABASE_URI
+              value: "postgresql+psycopg2://airflow:airflow@postgres-svc.data.svc.cluster.local/airflow"
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 60
+            periodSeconds: 30

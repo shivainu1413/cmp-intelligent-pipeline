@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
     branches: [main]
 
 jobs:
+  # --------------------------------------------------------
+  # Stage 1: Lint — Code quality check
+  # --------------------------------------------------------
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -17,6 +20,9 @@ jobs:
       - run: pip install ruff
       - run: ruff check dags/ plugins/ tests/
 
+  # --------------------------------------------------------
+  # Stage 2: Test — Unit tests with coverage
+  # --------------------------------------------------------
   test:
     runs-on: ubuntu-latest
     needs: lint
@@ -28,6 +34,9 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: pytest tests/ -v --cov=plugins --cov-report=term-missing
 
+  # --------------------------------------------------------
+  # Stage 3: Build — Docker images → GHCR
+  # --------------------------------------------------------
   build:
     runs-on: ubuntu-latest
     needs: test
@@ -64,3 +73,51 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}/superset:${{ github.sha }}
             ghcr.io/${{ github.repository }}/superset:latest
+
+  # --------------------------------------------------------
+  # Stage 4: Deploy — Pull new images and restart services
+  #
+  # Only runs on main branch after build succeeds.
+  # Requires these GitHub Secrets:
+  #   DEPLOY_HOST     — server IP or hostname
+  #   DEPLOY_USER     — SSH username
+  #   DEPLOY_SSH_KEY  — private SSH key
+  #   DEPLOY_PATH     — project path on server (e.g. /opt/cmp-pipeline)
+  #
+  # To skip deployment (e.g. while no server is set up),
+  # simply don't create these secrets. The job will be
+  # skipped gracefully.
+  # --------------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: Check deployment config
+        id: check
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️ DEPLOY_HOST not set, skipping deployment"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy via SSH
+        if: steps.check.outputs.skip == 'false'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull origin main
+            docker compose pull
+            docker compose up -d --remove-orphans
+            echo "✅ Deployed commit ${{ github.sha }}"
+
+      - name: Deployment skipped
+        if: steps.check.outputs.skip == 'true'
+        run: echo "ℹ️ No deployment target configured. Set DEPLOY_HOST secret to enable CD."

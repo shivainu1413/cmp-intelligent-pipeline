@@ -118,10 +118,38 @@ def process_cmp_logs(**context):
                     except Exception as e:
                         print(f" -> FAIL: MongoDB write: {e}")
 
-                # 5c. RAG analysis + Slack alert
+                # 5c. RAG analysis (structured diagnosis)
                 first_record = anomaly_df.row(0, named=True)
-                ai_suggestion = consult_llm_rag(first_record, KNOWLEDGE_DIR, GEMINI_API_KEY)
-                send_anomaly_alert(SLACK_ANOMALY_WEBHOOK, save_name, anomaly_df, ai_suggestion)
+                diagnosis = consult_llm_rag(first_record, KNOWLEDGE_DIR, GEMINI_API_KEY)
+                print(
+                    f" -> AI Diagnosis: {diagnosis.get('root_cause', 'N/A')} "
+                    f"(urgency={diagnosis.get('urgency')}, "
+                    f"confidence={diagnosis.get('confidence', 0):.0%})"
+                )
+
+                # 5d. Save diagnosis to MongoDB alongside anomaly
+                if MONGO_URI and not diagnosis.get("parse_error"):
+                    try:
+                        client_diag = pymongo.MongoClient(MONGO_URI, tlsCAFile=certifi.where())
+                        db_diag = client_diag["manufacturing_db"]
+                        db_diag["rag_diagnoses"].insert_one({
+                            "source_file": filename,
+                            "error_code": first_record.get("error_code"),
+                            "diagnosis": {
+                                "root_cause": diagnosis.get("root_cause"),
+                                "recommended_action": diagnosis.get("recommended_action"),
+                                "urgency": diagnosis.get("urgency"),
+                                "confidence": diagnosis.get("confidence"),
+                                "reasoning": diagnosis.get("reasoning"),
+                            },
+                            "created_at": datetime.utcnow(),
+                        })
+                        print(" -> OK: Diagnosis saved to MongoDB")
+                    except Exception as e:
+                        print(f" -> WARN: Failed to save diagnosis: {e}")
+
+                # 5e. Slack alert with structured diagnosis
+                send_anomaly_alert(SLACK_ANOMALY_WEBHOOK, save_name, anomaly_df, diagnosis)
 
             # Step 6: Archive
             parquet_name = filename.replace('.json', '.parquet')
