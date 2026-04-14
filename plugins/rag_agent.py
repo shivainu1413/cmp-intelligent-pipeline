@@ -190,7 +190,7 @@ def parse_llm_response(raw_text: str) -> dict:
     if cleaned.startswith("```"):
         lines = cleaned.split("\n")
         # Remove first and last lines (``` markers)
-        lines = [l for l in lines if not l.strip().startswith("```")]
+        lines = [line for line in lines if not line.strip().startswith("```")]
         cleaned = "\n".join(lines)
 
     try:
